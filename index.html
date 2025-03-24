@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Russell's Game Collection</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #121212;
+            color: #ffffff;
+        }
+        
+        header {
+            background-color: #1e1e1e;
+            padding: 2rem;
+            text-align: center;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        
+        h1 {
+            margin: 0;
+            font-size: 2.5rem;
+            background: linear-gradient(90deg, #4CAF50, #2196F3);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        
+        .subtitle {
+            font-size: 1.2rem;
+            margin-top: 0.5rem;
+            color: #aaaaaa;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 2rem auto;
+            padding: 0 1rem;
+        }
+        
+        .game-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 2rem;
+        }
+        
+        .game-card {
+            background-color: #1e1e1e;
+            border-radius: 10px;
+            overflow: hidden;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        
+        .game-card:hover {
+            transform: translateY(-10px);
+            box-shadow: 0 12px 16px rgba(0, 0, 0, 0.2);
+        }
+        
+        .game-image {
+            width: 100%;
+            height: 200px;
+            background-size: cover;
+            background-position: center;
+        }
+        
+        .game-info {
+            padding: 1.5rem;
+        }
+        
+        .game-title {
+            font-size: 1.5rem;
+            margin-top: 0;
+            margin-bottom: 0.5rem;
+            color: #ffffff;
+        }
+        
+        .game-description {
+            color: #aaaaaa;
+            margin-bottom: 1.5rem;
+            line-height: 1.6;
+        }
+        
+        .game-features {
+            margin-bottom: 1.5rem;
+        }
+        
+        .feature {
+            display: flex;
+            align-items: center;
+            margin-bottom: 0.5rem;
+            color: #dddddd;
+        }
+        
+        .feature:before {
+            content: "•";
+            color: #4CAF50;
+            font-weight: bold;
+            margin-right: 0.5rem;
+        }
+        
+        .play-button {
+            display: inline-block;
+            background: linear-gradient(90deg, #4CAF50, #2196F3);
+            color: white;
+            padding: 0.8rem 1.5rem;
+            border-radius: 30px;
+            text-decoration: none;
+            font-weight: bold;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        
+        .play-button:hover {
+            transform: scale(1.05);
+            box-shadow: 0 6px 8px rgba(0, 0, 0, 0.2);
+        }
+        
+        footer {
+            text-align: center;
+            padding: 2rem;
+            background-color: #1e1e1e;
+            color: #aaaaaa;
+            margin-top: 2rem;
+        }
+        
+        @media (max-width: 768px) {
+            .game-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            header {
+                padding: 1.5rem;
+            }
+            
+            h1 {
+                font-size: 2rem;
+            }
+        }
+        
+        #hello-world-image {
+            background-image: linear-gradient(rgba(0, 0, 0, 0.5), rgba(0, 0, 0, 0.5)), url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="300" height="200" viewBox="0 0 300 200"><rect width="300" height="200" fill="%23333"/><text x="150" y="100" font-family="Arial" font-size="24" fill="%234CAF50" text-anchor="middle">HELLO WORLD</text><circle cx="150" cy="100" r="50" fill="none" stroke="%234CAF50" stroke-width="2"/></svg>');
+        }
+        
+        #survival-game-image {
+            background-image: linear-gradient(rgba(0, 0, 0, 0.5), rgba(0, 0, 0, 0.5)), url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="300" height="200" viewBox="0 0 300 200"><rect width="300" height="200" fill="%23333"/><circle cx="150" cy="100" r="40" fill="%234CAF50" stroke="%23000" stroke-width="3"/><circle cx="80" cy="70" r="20" fill="%23ff4d4d" stroke="%23000" stroke-width="3"/><circle cx="220" cy="130" r="20" fill="%233399ff" stroke="%23000" stroke-width="3"/><circle cx="180" cy="60" r="15" fill="%23ffff33" stroke="%23000" stroke-width="3"/></svg>');
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>Russell's Game Collection</h1>
+        <div class="subtitle">A showcase of web-based games with modern graphics</div>
+    </header>
+    
+    <div class="container">
+        <div class="game-grid">
+            <div class="game-card">
+                <div class="game-image" id="hello-world-image"></div>
+                <div class="game-info">
+                    <h2 class="game-title">3D Hello World</h2>
+                    <p class="game-description">
+                        An interactive 3D experience featuring a rotating "HELLO WORLD" text with colorful effects and responsive controls.
+                    </p>
+                    <div class="game-features">
+                        <div class="feature">Interactive 3D text rotation with arrow keys</div>
+                        <div class="feature">Color changing functionality</div>
+                        <div class="feature">Scoring system when clicking on text</div>
+                        <div class="feature">Mobile-friendly controls</div>
+                        <div class="feature">Responsive design for all devices</div>
+                    </div>
+                    <a href="game1/index.html" class="play-button">Play Now</a>
+                </div>
+            </div>
+            
+            <div class="game-card">
+                <div class="game-image" id="survival-game-image"></div>
+                <div class="game-info">
+                    <h2 class="game-title">Survival Game</h2>
+                    <p class="game-description">
+                        A Survivor.io-style game with toony graphics where you battle waves of enemies, collect resources, and evolve your skills to survive as long as possible.
+                    </p>
+                    <div class="game-features">
+                        <div class="feature">Skill Evolution System with powerful abilities</div>
+                        <div class="feature">Wave-Based Enemy Spawning with boss encounters</div>
+                        <div class="feature">Experience and Leveling System</div>
+                        <div class="feature">Resource Collection mechanics</div>
+                        <div class="feature">Toony Graphics with cartoon-style outlines</div>
+                    </div>
+                    <a href="game2/index.html" class="play-button">Play Now</a>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <footer>
+        <p>Created by Russell Fife &copy; 2025</p>
+    </footer>
+</body>
+</html>

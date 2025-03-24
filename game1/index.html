@@ -1,0 +1,527 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>3D Hello World Game</title>
+    <style>
+        body { 
+            margin: 0;
+            overflow: hidden;
+            background-color: #000;
+            font-family: Arial, sans-serif;
+        }
+        canvas { 
+            display: block;
+        }
+        #instructions {
+            position: absolute;
+            bottom: 20px;
+            left: 0;
+            width: 100%;
+            color: white;
+            text-align: center;
+            pointer-events: none;
+            background-color: rgba(0,0,0,0.5);
+            padding: 10px;
+        }
+        #score {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            color: white;
+            font-size: 24px;
+            pointer-events: none;
+        }
+        #controls {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            color: white;
+            text-align: right;
+            background-color: rgba(0,0,0,0.5);
+            padding: 10px;
+            border-radius: 5px;
+        }
+        button {
+            background-color: #4CAF50;
+            border: none;
+            color: white;
+            padding: 10px 15px;
+            text-align: center;
+            text-decoration: none;
+            display: inline-block;
+            font-size: 16px;
+            margin: 4px 2px;
+            cursor: pointer;
+            border-radius: 5px;
+        }
+        .mobile-controls {
+            position: absolute;
+            bottom: 80px;
+            width: 100%;
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+        }
+        .mobile-controls button {
+            width: 60px;
+            height: 60px;
+            font-size: 24px;
+            border-radius: 30px;
+        }
+    </style>
+</head>
+<body>
+    <div id="score">Score: 0</div>
+    <div id="controls">
+        <button id="resetBtn">Reset</button>
+        <button id="colorBtn">Change Color</button>
+    </div>
+    <div class="mobile-controls">
+        <button id="leftBtn">←</button>
+        <button id="upBtn">↑</button>
+        <button id="downBtn">↓</button>
+        <button id="rightBtn">→</button>
+    </div>
+    <div id="instructions">
+        Desktop: Arrow keys to rotate, Space to change colors, Click on text to score points<br>
+        Mobile: Use on-screen buttons to control
+    </div>
+    
+    <script src="https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js"></script>
+    <script>
+        // Initialize Three.js scene
+        const scene = new THREE.Scene();
+        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+        const renderer = new THREE.WebGLRenderer({ antialias: true });
+        
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setClearColor(0x000000);
+        document.body.appendChild(renderer.domElement);
+        
+        // Add lights
+        const ambientLight = new THREE.AmbientLight(0x404040);
+        scene.add(ambientLight);
+        
+        const directionalLight = new THREE.DirectionalLight(0xffffff, 1);
+        directionalLight.position.set(1, 1, 1);
+        scene.add(directionalLight);
+        
+        // Game variables
+        let score = 0;
+        let textMesh;
+        let cubes = [];
+        const colors = [0x3399ff, 0xff3333, 0x33ff33, 0xffff33, 0xff33ff, 0x33ffff];
+        let currentColorIndex = 0;
+        
+        // Create text mesh
+        function createText() {
+            // Create a simple cube-based text instead of using TextGeometry
+            // This avoids loading external font files which might cause issues
+            
+            const letters = [
+                // H
+                {x: -7.5, y: 0, z: 0},
+                {x: -7.5, y: 1, z: 0},
+                {x: -7.5, y: -1, z: 0},
+                {x: -6.5, y: 0, z: 0},
+                {x: -5.5, y: 0, z: 0},
+                {x: -5.5, y: 1, z: 0},
+                {x: -5.5, y: -1, z: 0},
+                
+                // E
+                {x: -4.5, y: 0, z: 0},
+                {x: -4.5, y: 1, z: 0},
+                {x: -4.5, y: -1, z: 0},
+                {x: -3.5, y: 1, z: 0},
+                {x: -3.5, y: -1, z: 0},
+                {x: -3.5, y: 0, z: 0},
+                
+                // L
+                {x: -2.5, y: 0, z: 0},
+                {x: -2.5, y: 1, z: 0},
+                {x: -2.5, y: -1, z: 0},
+                {x: -1.5, y: -1, z: 0},
+                
+                // L
+                {x: -0.5, y: 0, z: 0},
+                {x: -0.5, y: 1, z: 0},
+                {x: -0.5, y: -1, z: 0},
+                {x: 0.5, y: -1, z: 0},
+                
+                // O
+                {x: 1.5, y: 0, z: 0},
+                {x: 1.5, y: 1, z: 0},
+                {x: 1.5, y: -1, z: 0},
+                {x: 2.5, y: 1, z: 0},
+                {x: 2.5, y: -1, z: 0},
+                {x: 3.5, y: 0, z: 0},
+                {x: 3.5, y: 1, z: 0},
+                {x: 3.5, y: -1, z: 0},
+                
+                // Space
+                
+                // W
+                {x: 5.0, y: 1, z: 0},
+                {x: 5.0, y: 0, z: 0},
+                {x: 5.0, y: -1, z: 0},
+                {x: 6.0, y: -1, z: 0},
+                {x: 7.0, y: 0, z: 0},
+                {x: 8.0, y: -1, z: 0},
+                {x: 9.0, y: 1, z: 0},
+                {x: 9.0, y: 0, z: 0},
+                {x: 9.0, y: -1, z: 0},
+                
+                // O
+                {x: 10.5, y: 0, z: 0},
+                {x: 10.5, y: 1, z: 0},
+                {x: 10.5, y: -1, z: 0},
+                {x: 11.5, y: 1, z: 0},
+                {x: 11.5, y: -1, z: 0},
+                {x: 12.5, y: 0, z: 0},
+                {x: 12.5, y: 1, z: 0},
+                {x: 12.5, y: -1, z: 0},
+                
+                // R
+                {x: 14.0, y: 0, z: 0},
+                {x: 14.0, y: 1, z: 0},
+                {x: 14.0, y: -1, z: 0},
+                {x: 15.0, y: 1, z: 0},
+                {x: 15.0, y: 0, z: 0},
+                {x: 16.0, y: 1, z: 0},
+                {x: 15.0, y: -0.5, z: 0},
+                {x: 16.0, y: -1, z: 0},
+                
+                // L
+                {x: 17.5, y: 0, z: 0},
+                {x: 17.5, y: 1, z: 0},
+                {x: 17.5, y: -1, z: 0},
+                {x: 18.5, y: -1, z: 0},
+                
+                // D
+                {x: 20.0, y: 0, z: 0},
+                {x: 20.0, y: 1, z: 0},
+                {x: 20.0, y: -1, z: 0},
+                {x: 21.0, y: 1, z: 0},
+                {x: 21.0, y: -1, z: 0},
+                {x: 22.0, y: 0.5, z: 0},
+                {x: 22.0, y: -0.5, z: 0}
+            ];
+            
+            const group = new THREE.Group();
+            const material = new THREE.MeshPhongMaterial({ 
+                color: colors[currentColorIndex],
+                specular: 0x111111,
+                shininess: 30
+            });
+            
+            letters.forEach(pos => {
+                const geometry = new THREE.BoxGeometry(0.8, 0.8, 0.8);
+                const cube = new THREE.Mesh(geometry, material);
+                cube.position.set(pos.x, pos.y, pos.z);
+                group.add(cube);
+                cubes.push(cube);
+            });
+            
+            // Center the text
+            group.position.x = -7;
+            
+            textMesh = group;
+            scene.add(textMesh);
+        }
+        
+        // Create floating objects
+        function createFloatingObjects() {
+            for (let i = 0; i < 20; i++) {
+                const geometry = new THREE.SphereGeometry(0.2, 8, 8);
+                const material = new THREE.MeshPhongMaterial({ 
+                    color: colors[Math.floor(Math.random() * colors.length)],
+                    transparent: true,
+                    opacity: 0.7
+                });
+                const sphere = new THREE.Mesh(geometry, material);
+                
+                // Random position
+                sphere.position.x = Math.random() * 40 - 20;
+                sphere.position.y = Math.random() * 40 - 20;
+                sphere.position.z = Math.random() * 10 - 15;
+                
+                // Add to scene
+                scene.add(sphere);
+                
+                // Store velocity for animation
+                sphere.userData = {
+                    velocityX: Math.random() * 0.02 - 0.01,
+                    velocityY: Math.random() * 0.02 - 0.01,
+                    velocityZ: Math.random() * 0.02 - 0.01
+                };
+                
+                // Add to objects array
+                floatingObjects.push(sphere);
+            }
+        }
+        
+        // Create initial scene
+        const floatingObjects = [];
+        createText();
+        createFloatingObjects();
+        
+        // Position camera
+        camera.position.z = 15;
+        
+        // Variables for rotation control
+        let rotationSpeed = 0.02;
+        const keyState = {
+            ArrowLeft: false,
+            ArrowRight: false,
+            ArrowUp: false,
+            ArrowDown: false
+        };
+        
+        // Event listeners for keyboard controls
+        window.addEventListener('keydown', function(event) {
+            if (event.code in keyState) {
+                keyState[event.code] = true;
+                event.preventDefault();
+            } else if (event.code === 'Space') {
+                changeColor();
+                event.preventDefault();
+            }
+        });
+        
+        window.addEventListener('keyup', function(event) {
+            if (event.code in keyState) {
+                keyState[event.code] = false;
+                event.preventDefault();
+            }
+        });
+        
+        // Change color function
+        function changeColor() {
+            currentColorIndex = (currentColorIndex + 1) % colors.length;
+            if (textMesh) {
+                textMesh.children.forEach(cube => {
+                    cube.material.color.setHex(colors[currentColorIndex]);
+                });
+            }
+        }
+        
+        // Reset function
+        function resetGame() {
+            score = 0;
+            document.getElementById('score').textContent = 'Score: ' + score;
+            
+            if (textMesh) {
+                textMesh.rotation.x = 0;
+                textMesh.rotation.y = 0;
+                textMesh.rotation.z = 0;
+            }
+        }
+        
+        // Click event for scoring
+        const raycaster = new THREE.Raycaster();
+        const mouse = new THREE.Vector2();
+        
+        function onMouseClick(event) {
+            // Calculate mouse position in normalized device coordinates
+            mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+            mouse.y = - (event.clientY / window.innerHeight) * 2 + 1;
+            
+            // Update the picking ray with the camera and mouse position
+            raycaster.setFromCamera(mouse, camera);
+            
+            // Calculate objects intersecting the picking ray
+            const intersects = raycaster.intersectObjects(cubes);
+            
+            if (intersects.length > 0) {
+                score += 10;
+                document.getElementById('score').textContent = 'Score: ' + score;
+                
+                // Create particle effect at click position
+                createParticles(intersects[0].point);
+            }
+        }
+        
+        // Create particles for click effect
+        function createParticles(position) {
+            const particleCount = 20;
+            const particles = new THREE.Group();
+            
+            for (let i = 0; i < particleCount; i++) {
+                const geometry = new THREE.SphereGeometry(0.1, 4, 4);
+                const material = new THREE.MeshBasicMaterial({ 
+                    color: colors[currentColorIndex],
+                    transparent: true,
+                    opacity: 0.8
+                });
+                const particle = new THREE.Mesh(geometry, material);
+                
+                // Set position to click point
+                particle.position.copy(position);
+                
+                // Add random velocity
+                particle.userData = {
+                    velocityX: Math.random() * 0.1 - 0.05,
+                    velocityY: Math.random() * 0.1 - 0.05,
+                    velocityZ: Math.random() * 0.1 - 0.05,
+                    life: 60 // frames to live
+                };
+                
+                particles.add(particle);
+            }
+            
+            scene.add(particles);
+            
+            // Store in array for animation
+            particleSystems.push(particles);
+        }
+        
+        // Store particle systems
+        const particleSystems = [];
+        
+        // Add event listeners
+        window.addEventListener('click', onMouseClick);
+        window.addEventListener('touchstart', function(event) {
+            // Convert touch to click for mobile
+            const touch = event.touches[0];
+            const clickEvent = new MouseEvent('click', {
+                clientX: touch.clientX,
+                clientY: touch.clientY
+            });
+            onMouseClick(clickEvent);
+        });
+        
+        // Button controls
+        document.getElementById('resetBtn').addEventListener('click', resetGame);
+        document.getElementById('colorBtn').addEventListener('click', changeColor);
+        
+        // Mobile controls
+        document.getElementById('leftBtn').addEventListener('mousedown', function() {
+            keyState.ArrowLeft = true;
+        });
+        document.getElementById('leftBtn').addEventListener('mouseup', function() {
+            keyState.ArrowLeft = false;
+        });
+        document.getElementById('leftBtn').addEventListener('touchstart', function() {
+            keyState.ArrowLeft = true;
+        });
+        document.getElementById('leftBtn').addEventListener('touchend', function() {
+            keyState.ArrowLeft = false;
+        });
+        
+        document.getElementById('rightBtn').addEventListener('mousedown', function() {
+            keyState.ArrowRight = true;
+        });
+        document.getElementById('rightBtn').addEventListener('mouseup', function() {
+            keyState.ArrowRight = false;
+        });
+        document.getElementById('rightBtn').addEventListener('touchstart', function() {
+            keyState.ArrowRight = true;
+        });
+        document.getElementById('rightBtn').addEventListener('touchend', function() {
+            keyState.ArrowRight = false;
+        });
+        
+        document.getElementById('upBtn').addEventListener('mousedown', function() {
+            keyState.ArrowUp = true;
+        });
+        document.getElementById('upBtn').addEventListener('mouseup', function() {
+            keyState.ArrowUp = false;
+        });
+        document.getElementById('upBtn').addEventListener('touchstart', function() {
+            keyState.ArrowUp = true;
+        });
+        document.getElementById('upBtn').addEventListener('touchend', function() {
+            keyState.ArrowUp = false;
+        });
+        
+        document.getElementById('downBtn').addEventListener('mousedown', function() {
+            keyState.ArrowDown = true;
+        });
+        document.getElementById('downBtn').addEventListener('mouseup', function() {
+            keyState.ArrowDown = false;
+        });
+        document.getElementById('downBtn').addEventListener('touchstart', function() {
+            keyState.ArrowDown = true;
+        });
+        document.getElementById('downBtn').addEventListener('touchend', function() {
+            keyState.ArrowDown = false;
+        });
+        
+        // Handle window resize
+        window.addEventListener('resize', function() {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+        
+        // Animation loop
+        function animate() {
+            requestAnimationFrame(animate);
+            
+            // Apply rotation based on key states
+            if (textMesh) {
+                if (keyState.ArrowLeft) textMesh.rotation.y += rotationSpeed;
+                if (keyState.ArrowRight) textMesh.rotation.y -= rotationSpeed;
+                if (keyState.ArrowUp) textMesh.rotation.x += rotationSpeed;
+                if (keyState.ArrowDown) textMesh.rotation.x -= rotationSpeed;
+                
+                // Add a gentle automatic rotation
+                textMesh.rotation.y += 0.001;
+            }
+            
+            // Animate floating objects
+            floatingObjects.forEach(obj => {
+                obj.position.x += obj.userData.velocityX;
+                obj.position.y += obj.userData.velocityY;
+                obj.position.z += obj.userData.velocityZ;
+                
+                // Boundary check and bounce
+                if (Math.abs(obj.position.x) > 20) obj.userData.velocityX *= -1;
+                if (Math.abs(obj.position.y) > 20) obj.userData.velocityY *= -1;
+                if (Math.abs(obj.position.z) > 20) obj.userData.velocityZ *= -1;
+                
+                // Rotate the object
+                obj.rotation.x += 0.01;
+                obj.rotation.y += 0.01;
+            });
+            
+            // Animate particle systems
+            for (let i = particleSystems.length - 1; i >= 0; i--) {
+                const system = particleSystems[i];
+                let allDead = true;
+                
+                system.children.forEach(particle => {
+                    // Move particle
+                    particle.position.x += particle.userData.velocityX;
+                    particle.position.y += particle.userData.velocityY;
+                    particle.position.z += particle.userData.velocityZ;
+                    
+                    // Reduce life
+                    particle.userData.life--;
+                    
+                    // Fade out
+                    if (particle.userData.life < 30) {
+                        particle.material.opacity = particle.userData.life / 30;
+                    }
+                    
+                    if (particle.userData.life > 0) {
+                        allDead = false;
+                    }
+                });
+                
+                // Remove dead particle systems
+                if (allDead) {
+                    scene.remove(system);
+                    particleSystems.splice(i, 1);
+                }
+            }
+            
+            renderer.render(scene, camera);
+        }
+        
+        animate();
+    </script>
+</body>
+</html>

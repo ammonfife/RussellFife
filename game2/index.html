@@ -1,0 +1,758 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Survival Game</title>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            background-color: #000;
+            font-family: Arial, sans-serif;
+            color: white;
+        }
+        canvas {
+            display: block;
+        }
+        #instructions {
+            position: absolute;
+            bottom: 20px;
+            left: 0;
+            width: 100%;
+            color: white;
+            text-align: center;
+            pointer-events: none;
+            background-color: rgba(0,0,0,0.5);
+            padding: 10px;
+        }
+        #score {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            color: white;
+            font-size: 24px;
+            pointer-events: none;
+        }
+        #controls {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            color: white;
+            text-align: right;
+            background-color: rgba(0,0,0,0.5);
+            padding: 10px;
+            border-radius: 5px;
+        }
+        button {
+            background-color: #4CAF50;
+            border: none;
+            color: white;
+            padding: 10px 20px;
+            text-align: center;
+            text-decoration: none;
+            display: inline-block;
+            font-size: 16px;
+            margin: 4px 2px;
+            cursor: pointer;
+            border-radius: 5px;
+        }
+        #gameOver {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: white;
+            font-size: 48px;
+            text-align: center;
+            background-color: rgba(0,0,0,0.7);
+            padding: 20px;
+            border-radius: 10px;
+            display: none;
+        }
+        #mobileControls {
+            position: absolute;
+            bottom: 80px;
+            width: 100%;
+            display: flex;
+            justify-content: center;
+            pointer-events: none;
+        }
+        .controlBtn {
+            width: 60px;
+            height: 60px;
+            background-color: rgba(255,255,255,0.3);
+            border-radius: 50%;
+            margin: 0 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            pointer-events: auto;
+        }
+        @media (min-width: 768px) {
+            #mobileControls {
+                display: none;
+            }
+        }
+    </style>
+</head>
+<body>
+    <canvas id="gameCanvas"></canvas>
+    <div id="score">Score: 0</div>
+    <div id="controls">
+        <button id="resetBtn">Reset Game</button>
+    </div>
+    <div id="instructions">
+        Use WASD or arrow keys to move. Survive as long as possible!<br>
+        Collect resources and defeat enemies to level up.
+    </div>
+    <div id="gameOver">
+        Game Over<br>
+        <span id="finalScore">Score: 0</span><br>
+        <button id="restartBtn">Play Again</button>
+    </div>
+    <div id="mobileControls">
+        <div class="controlBtn" id="leftBtn">←</div>
+        <div class="controlBtn" id="upBtn">↑</div>
+        <div class="controlBtn" id="downBtn">↓</div>
+        <div class="controlBtn" id="rightBtn">→</div>
+    </div>
+
+    <script>
+        // Game variables
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        let score = 0;
+        let gameActive = true;
+        let player = {
+            x: 0,
+            y: 0,
+            size: 30,
+            speed: 5,
+            color: '#4CAF50',
+            health: 100,
+            maxHealth: 100,
+            level: 1,
+            experience: 0,
+            experienceToNextLevel: 100
+        };
+        let enemies = [];
+        let resources = [];
+        let particles = [];
+        let skills = [];
+        let currentWave = 1;
+        let waveTimer = 0;
+        let waveInterval = 1000;
+        let keys = {};
+        let screenShake = 0;
+        
+        // Initialize game
+        function init() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+            player.x = canvas.width / 2;
+            player.y = canvas.height / 2;
+            score = 0;
+            gameActive = true;
+            enemies = [];
+            resources = [];
+            particles = [];
+            skills = [];
+            currentWave = 1;
+            waveTimer = 0;
+            player.health = player.maxHealth;
+            player.level = 1;
+            player.experience = 0;
+            player.experienceToNextLevel = 100;
+            document.getElementById('score').textContent = 'Score: 0';
+            document.getElementById('gameOver').style.display = 'none';
+            
+            // Add initial skills
+            skills.push({
+                name: 'Basic Attack',
+                level: 1,
+                cooldown: 500,
+                lastUsed: 0,
+                color: '#4CAF50',
+                use: function() {
+                    const now = Date.now();
+                    if (now - this.lastUsed > this.cooldown) {
+                        this.lastUsed = now;
+                        // Create projectile particles
+                        for (let i = 0; i < 4; i++) {
+                            const angle = (i * Math.PI / 2) + (Date.now() / 1000) % (Math.PI * 2);
+                            particles.push({
+                                x: player.x,
+                                y: player.y,
+                                size: 10,
+                                speed: 8,
+                                dx: Math.cos(angle) * 8,
+                                dy: Math.sin(angle) * 8,
+                                color: this.color,
+                                life: 100,
+                                maxLife: 100,
+                                type: 'projectile'
+                            });
+                        }
+                    }
+                }
+            });
+        }
+        
+        // Event listeners
+        window.addEventListener('resize', function() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        });
+        
+        window.addEventListener('keydown', function(e) {
+            keys[e.key] = true;
+        });
+        
+        window.addEventListener('keyup', function(e) {
+            keys[e.key] = false;
+        });
+        
+        document.getElementById('resetBtn').addEventListener('click', init);
+        document.getElementById('restartBtn').addEventListener('click', init);
+        
+        // Mobile controls
+        const mobileControls = {
+            up: false,
+            down: false,
+            left: false,
+            right: false
+        };
+        
+        document.getElementById('upBtn').addEventListener('touchstart', function() {
+            mobileControls.up = true;
+        });
+        document.getElementById('upBtn').addEventListener('touchend', function() {
+            mobileControls.up = false;
+        });
+        
+        document.getElementById('downBtn').addEventListener('touchstart', function() {
+            mobileControls.down = true;
+        });
+        document.getElementById('downBtn').addEventListener('touchend', function() {
+            mobileControls.down = false;
+        });
+        
+        document.getElementById('leftBtn').addEventListener('touchstart', function() {
+            mobileControls.left = true;
+        });
+        document.getElementById('leftBtn').addEventListener('touchend', function() {
+            mobileControls.left = false;
+        });
+        
+        document.getElementById('rightBtn').addEventListener('touchstart', function() {
+            mobileControls.right = true;
+        });
+        document.getElementById('rightBtn').addEventListener('touchend', function() {
+            mobileControls.right = false;
+        });
+        
+        // Game functions
+        function update() {
+            if (!gameActive) return;
+            
+            // Player movement
+            if (keys['w'] || keys['ArrowUp'] || mobileControls.up) {
+                player.y -= player.speed;
+            }
+            if (keys['s'] || keys['ArrowDown'] || mobileControls.down) {
+                player.y += player.speed;
+            }
+            if (keys['a'] || keys['ArrowLeft'] || mobileControls.left) {
+                player.x -= player.speed;
+            }
+            if (keys['d'] || keys['ArrowRight'] || mobileControls.right) {
+                player.x += player.speed;
+            }
+            
+            // Keep player in bounds
+            player.x = Math.max(player.size / 2, Math.min(canvas.width - player.size / 2, player.x));
+            player.y = Math.max(player.size / 2, Math.min(canvas.height - player.size / 2, player.y));
+            
+            // Wave system
+            waveTimer++;
+            if (waveTimer >= waveInterval) {
+                waveTimer = 0;
+                spawnEnemies();
+            }
+            
+            // Use skills
+            skills.forEach(skill => skill.use());
+            
+            // Update enemies
+            for (let i = enemies.length - 1; i >= 0; i--) {
+                const enemy = enemies[i];
+                
+                // Move enemy towards player
+                const dx = player.x - enemy.x;
+                const dy = player.y - enemy.y;
+                const distance = Math.sqrt(dx * dx + dy * dy);
+                
+                if (distance > 0) {
+                    enemy.x += (dx / distance) * enemy.speed;
+                    enemy.y += (dy / distance) * enemy.speed;
+                }
+                
+                // Check collision with player
+                if (distance < player.size / 2 + enemy.size / 2) {
+                    player.health -= enemy.damage;
+                    screenShake = 10;
+                    
+                    // Create damage particles
+                    for (let j = 0; j < 5; j++) {
+                        particles.push({
+                            x: player.x,
+                            y: player.y,
+                            size: 5,
+                            speed: 3,
+                            dx: (Math.random() - 0.5) * 6,
+                            dy: (Math.random() - 0.5) * 6,
+                            color: '#ff0000',
+                            life: 30,
+                            maxLife: 30,
+                            type: 'damage'
+                        });
+                    }
+                    
+                    if (player.health <= 0) {
+                        gameOver();
+                    }
+                }
+                
+                // Check collision with projectiles
+                for (let j = particles.length - 1; j >= 0; j--) {
+                    const particle = particles[j];
+                    if (particle.type === 'projectile') {
+                        const dx = particle.x - enemy.x;
+                        const dy = particle.y - enemy.y;
+                        const distance = Math.sqrt(dx * dx + dy * dy);
+                        
+                        if (distance < particle.size / 2 + enemy.size / 2) {
+                            enemy.health -= 10 * player.level;
+                            particles.splice(j, 1);
+                            
+                            // Create hit particles
+                            for (let k = 0; k < 3; k++) {
+                                particles.push({
+                                    x: enemy.x,
+                                    y: enemy.y,
+                                    size: 3,
+                                    speed: 2,
+                                    dx: (Math.random() - 0.5) * 4,
+                                    dy: (Math.random() - 0.5) * 4,
+                                    color: '#ffffff',
+                                    life: 20,
+                                    maxLife: 20,
+                                    type: 'hit'
+                                });
+                            }
+                            
+                            // Show damage number
+                            particles.push({
+                                x: enemy.x,
+                                y: enemy.y - enemy.size,
+                                size: 20,
+                                speed: 1,
+                                dx: 0,
+                                dy: -1,
+                                color: '#ffff00',
+                                text: (10 * player.level).toString(),
+                                life: 50,
+                                maxLife: 50,
+                                type: 'text'
+                            });
+                            
+                            if (enemy.health <= 0) {
+                                // Create explosion particles
+                                for (let k = 0; k < 10; k++) {
+                                    particles.push({
+                                        x: enemy.x,
+                                        y: enemy.y,
+                                        size: 8,
+                                        speed: 3,
+                                        dx: (Math.random() - 0.5) * 8,
+                                        dy: (Math.random() - 0.5) * 8,
+                                        color: enemy.color,
+                                        life: 40,
+                                        maxLife: 40,
+                                        type: 'explosion'
+                                    });
+                                }
+                                
+                                // Spawn resources
+                                for (let k = 0; k < enemy.value; k++) {
+                                    resources.push({
+                                        x: enemy.x + (Math.random() - 0.5) * 30,
+                                        y: enemy.y + (Math.random() - 0.5) * 30,
+                                        size: 8,
+                                        color: '#00ffff',
+                                        value: 10,
+                                        attractSpeed: 0
+                                    });
+                                }
+                                
+                                // Remove enemy
+                                enemies.splice(i, 1);
+                                score += enemy.value * 10;
+                                document.getElementById('score').textContent = 'Score: ' + score;
+                                break;
+                            }
+                        }
+                    }
+                }
+            }
+            
+            // Update resources
+            for (let i = resources.length - 1; i >= 0; i--) {
+                const resource = resources[i];
+                
+                // Attract resources to player
+                const dx = player.x - resource.x;
+                const dy = player.y - resource.y;
+                const distance = Math.sqrt(dx * dx + dy * dy);
+                
+                if (distance < 150) {
+                    resource.attractSpeed += 0.2;
+                    resource.x += (dx / distance) * resource.attractSpeed;
+                    resource.y += (dy / distance) * resource.attractSpeed;
+                }
+                
+                // Check collision with player
+                if (distance < player.size / 2 + resource.size) {
+                    player.experience += resource.value;
+                    
+                    // Create collection particles
+                    for (let j = 0; j < 3; j++) {
+                        particles.push({
+                            x: resource.x,
+                            y: resource.y,
+                            size: 4,
+                            speed: 2,
+                            dx: (Math.random() - 0.5) * 4,
+                            dy: (Math.random() - 0.5) * 4,
+                            color: resource.color,
+                            life: 20,
+                            maxLife: 20,
+                            type: 'collection'
+                        });
+                    }
+                    
+                    resources.splice(i, 1);
+                    
+                    // Level up
+                    if (player.experience >= player.experienceToNextLevel) {
+                        levelUp();
+                    }
+                }
+            }
+            
+            // Update particles
+            for (let i = particles.length - 1; i >= 0; i--) {
+                const particle = particles[i];
+                
+                particle.x += particle.dx;
+                particle.y += particle.dy;
+                particle.life--;
+                
+                if (particle.life <= 0) {
+                    particles.splice(i, 1);
+                }
+            }
+            
+            // Update screen shake
+            if (screenShake > 0) {
+                screenShake--;
+            }
+        }
+        
+        function draw() {
+            // Clear canvas
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            // Apply screen shake
+            if (screenShake > 0) {
+                ctx.save();
+                const shakeX = (Math.random() - 0.5) * screenShake;
+                const shakeY = (Math.random() - 0.5) * screenShake;
+                ctx.translate(shakeX, shakeY);
+            }
+            
+            // Draw resources
+            resources.forEach(resource => {
+                ctx.beginPath();
+                ctx.arc(resource.x, resource.y, resource.size, 0, Math.PI * 2);
+                ctx.fillStyle = resource.color;
+                ctx.fill();
+                
+                // Draw outline
+                ctx.strokeStyle = '#000000';
+                ctx.lineWidth = 2;
+                ctx.stroke();
+            });
+            
+            // Draw enemies
+            enemies.forEach(enemy => {
+                // Draw enemy body
+                ctx.beginPath();
+                ctx.arc(enemy.x, enemy.y, enemy.size, 0, Math.PI * 2);
+                ctx.fillStyle = enemy.color;
+                ctx.fill();
+                
+                // Draw outline
+                ctx.strokeStyle = '#000000';
+                ctx.lineWidth = 3;
+                ctx.stroke();
+                
+                // Draw health bar
+                const healthBarWidth = enemy.size * 2;
+                const healthBarHeight = 5;
+                const healthPercent = enemy.health / enemy.maxHealth;
+                
+                ctx.fillStyle = '#333333';
+                ctx.fillRect(enemy.x - healthBarWidth / 2, enemy.y - enemy.size - 10, healthBarWidth, healthBarHeight);
+                
+                ctx.fillStyle = '#ff0000';
+                ctx.fillRect(enemy.x - healthBarWidth / 2, enemy.y - enemy.size - 10, healthBarWidth * healthPercent, healthBarHeight);
+                
+                // Draw outline
+                ctx.strokeStyle = '#000000';
+                ctx.lineWidth = 1;
+                ctx.strokeRect(enemy.x - healthBarWidth / 2, enemy.y - enemy.size - 10, healthBarWidth, healthBarHeight);
+            });
+            
+            // Draw player
+            ctx.beginPath();
+            ctx.arc(player.x, player.y, player.size / 2, 0, Math.PI * 2);
+            ctx.fillStyle = player.color;
+            ctx.fill();
+            
+            // Draw outline
+            ctx.strokeStyle = '#000000';
+            ctx.lineWidth = 3;
+            ctx.stroke();
+            
+            // Draw health bar
+            const healthBarWidth = 200;
+            const healthBarHeight = 20;
+            const healthPercent = player.health / player.maxHealth;
+            
+            ctx.fillStyle = '#333333';
+            ctx.fillRect(20, 50, healthBarWidth, healthBarHeight);
+            
+            ctx.fillStyle = '#ff0000';
+            ctx.fillRect(20, 50, healthBarWidth * healthPercent, healthBarHeight);
+            
+            // Draw outline
+            ctx.strokeStyle = '#000000';
+            ctx.lineWidth = 2;
+            ctx.strokeRect(20, 50, healthBarWidth, healthBarHeight);
+            
+            // Draw experience bar
+            const expBarWidth = 200;
+            const expBarHeight = 10;
+            const expPercent = player.experience / player.experienceToNextLevel;
+            
+            ctx.fillStyle = '#333333';
+            ctx.fillRect(20, 80, expBarWidth, expBarHeight);
+            
+            ctx.fillStyle = '#00ffff';
+            ctx.fillRect(20, 80, expBarWidth * expPercent, expBarHeight);
+            
+            // Draw outline
+            ctx.strokeStyle = '#000000';
+            ctx.lineWidth = 1;
+            ctx.strokeRect(20, 80, expBarWidth, expBarHeight);
+            
+            // Draw level
+            ctx.fillStyle = '#ffffff';
+            ctx.font = '16px Arial';
+            ctx.fillText('Level: ' + player.level, 20, 110);
+            
+            // Draw wave indicator
+            ctx.fillStyle = '#ffffff';
+            ctx.font = '16px Arial';
+            ctx.fillText('Wave: ' + currentWave, 20, 130);
+            
+            // Draw particles
+            particles.forEach(particle => {
+                if (particle.type === 'text') {
+                    ctx.fillStyle = particle.color;
+                    ctx.font = particle.size + 'px Arial';
+                    ctx.fillText(particle.text, particle.x, particle.y);
+                } else {
+                    ctx.globalAlpha = particle.life / particle.maxLife;
+                    ctx.beginPath();
+                    ctx.arc(particle.x, particle.y, particle.size * (particle.life / particle.maxLife), 0, Math.PI * 2);
+                    ctx.fillStyle = particle.color;
+                    ctx.fill();
+                    ctx.globalAlpha = 1;
+                }
+            });
+            
+            // Reset screen shake
+            if (screenShake > 0) {
+                ctx.restore();
+            }
+        }
+        
+        function spawnEnemies() {
+            const enemyCount = Math.min(5 + currentWave, 20);
+            
+            for (let i = 0; i < enemyCount; i++) {
+                // Spawn enemies outside the screen
+                let x, y;
+                if (Math.random() < 0.5) {
+                    x = Math.random() < 0.5 ? -30 : canvas.width + 30;
+                    y = Math.random() * canvas.height;
+                } else {
+                    x = Math.random() * canvas.width;
+                    y = Math.random() < 0.5 ? -30 : canvas.height + 30;
+                }
+                
+                enemies.push({
+                    x: x,
+                    y: y,
+                    size: 20,
+                    speed: 1 + Math.random() * 2,
+                    color: getRandomColor(),
+                    health: 30 * currentWave,
+                    maxHealth: 30 * currentWave,
+                    damage: 5 + currentWave,
+                    value: 1 + Math.floor(currentWave / 3)
+                });
+            }
+            
+            // Boss every 5 waves
+            if (currentWave % 5 === 0) {
+                let x, y;
+                if (Math.random() < 0.5) {
+                    x = Math.random() < 0.5 ? -50 : canvas.width + 50;
+                    y = Math.random() * canvas.height;
+                } else {
+                    x = Math.random() * canvas.width;
+                    y = Math.random() < 0.5 ? -50 : canvas.height + 50;
+                }
+                
+                enemies.push({
+                    x: x,
+                    y: y,
+                    size: 40,
+                    speed: 0.8,
+                    color: '#ff0000',
+                    health: 200 * currentWave,
+                    maxHealth: 200 * currentWave,
+                    damage: 20 + currentWave * 2,
+                    value: 10 + currentWave
+                });
+            }
+            
+            currentWave++;
+        }
+        
+        function levelUp() {
+            player.level++;
+            player.experience -= player.experienceToNextLevel;
+            player.experienceToNextLevel = Math.floor(player.experienceToNextLevel * 1.5);
+            player.maxHealth += 20;
+            player.health = player.maxHealth;
+            
+            // Create level up particles
+            for (let i = 0; i < 20; i++) {
+                particles.push({
+                    x: player.x,
+                    y: player.y,
+                    size: 10,
+                    speed: 5,
+                    dx: Math.cos(i / 10 * Math.PI * 2) * 5,
+                    dy: Math.sin(i / 10 * Math.PI * 2) * 5,
+                    color: '#ffff00',
+                    life: 60,
+                    maxLife: 60,
+                    type: 'levelUp'
+                });
+            }
+            
+            // Show level up text
+            particles.push({
+                x: player.x,
+                y: player.y - 50,
+                size: 30,
+                speed: 1,
+                dx: 0,
+                dy: -1,
+                color: '#ffff00',
+                text: 'LEVEL UP!',
+                life: 100,
+                maxLife: 100,
+                type: 'text'
+            });
+            
+            // Upgrade skills or add new ones
+            if (player.level % 3 === 0) {
+                const skillIndex = Math.floor(Math.random() * skills.length);
+                skills[skillIndex].level++;
+                skills[skillIndex].cooldown = Math.max(100, skills[skillIndex].cooldown - 50);
+            }
+            
+            if (player.level === 5) {
+                skills.push({
+                    name: 'Area Attack',
+                    level: 1,
+                    cooldown: 2000,
+                    lastUsed: 0,
+                    color: '#ff00ff',
+                    use: function() {
+                        const now = Date.now();
+                        if (now - this.lastUsed > this.cooldown) {
+                            this.lastUsed = now;
+                            // Create area attack particles
+                            for (let i = 0; i < 16; i++) {
+                                const angle = (i * Math.PI / 8);
+                                particles.push({
+                                    x: player.x,
+                                    y: player.y,
+                                    size: 15,
+                                    speed: 6,
+                                    dx: Math.cos(angle) * 6,
+                                    dy: Math.sin(angle) * 6,
+                                    color: this.color,
+                                    life: 120,
+                                    maxLife: 120,
+                                    type: 'projectile'
+                                });
+                            }
+                        }
+                    }
+                });
+            }
+        }
+        
+        function gameOver() {
+            gameActive = false;
+            document.getElementById('finalScore').textContent = 'Score: ' + score;
+            document.getElementById('gameOver').style.display = 'block';
+        }
+        
+        function getRandomColor() {
+            const colors = ['#ff4d4d', '#ff9933', '#ffff33', '#33cc33', '#3399ff', '#9933ff'];
+            return colors[Math.floor(Math.random() * colors.length)];
+        }
+        
+        function gameLoop() {
+            update();
+            draw();
+            requestAnimationFrame(gameLoop);
+        }
+        
+        // Start game
+        init();
+        gameLoop();
+    </script>
+</body>
+</html>
